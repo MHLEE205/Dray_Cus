@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEENAI ドレー・通関 確認ツール v1.2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+  --accent:#4f8ef7; --ok:#22c55e; --warn:#f59e0b; --error:#ef4444;
+  --info:#38bdf8; --text:#e2e8f0; --text2:#8892a4; --text3:#4a5568;
+  --x1:#a78bfa; --x2:#f472b6; --h1:#34d399; --h2:#60a5fa; --h3:#fb923c;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.logo{font-size:17px;font-weight:700;letter-spacing:1px;}.logo span{color:var(--accent);}
+.version{color:var(--text2);font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:4px;}
+.api-mini{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.api-mini input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;width:220px;font-size:12px;}
+.api-mini input:focus{outline:none;border-color:var(--accent);}
+.api-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);}
+.api-dot.ok{background:var(--ok);}
+
+.tabs{display:flex;gap:2px;padding:16px 20px 0;background:var(--bg);}
+.tab{padding:9px 20px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--text2);font-weight:600;font-size:13px;border:1px solid transparent;border-bottom:none;transition:all .15s;}
+.tab.active{background:var(--surface);color:var(--text);border-color:var(--border);}
+.tab:hover:not(.active){color:var(--text);}
+.tab-body{display:none;}.tab-body.active{display:block;}
+.tab-content{background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 8px 8px 8px;padding:20px;min-height:400px;}
+
+.folder-banner{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.folder-banner.ok{border-color:var(--ok);}
+.folder-path{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.folder-path b{color:var(--text);}
+
+.month-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.month-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;}
+.month-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.month-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+
+.dash-table-wrap{overflow-x:auto;}
+.dash-table{width:100%;border-collapse:collapse;font-size:12px;}
+.dash-table th{background:var(--surface2);color:var(--text2);padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;}
+.dash-table td{padding:8px 12px;border-bottom:1px solid rgba(46,51,80,.4);vertical-align:middle;}
+.dash-table tr:hover td{background:rgba(79,142,247,.04);}
+.dash-table .num{text-align:right;font-variant-numeric:tabular-nums;}
+
+.sbadge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;}
+.sbadge-ok{background:rgba(34,197,94,.15);color:var(--ok);}
+.sbadge-error{background:rgba(239,68,68,.15);color:var(--error);}
+.sbadge-none{background:var(--surface2);color:var(--text2);}
+.sbadge-warn{background:rgba(245,158,11,.15);color:var(--warn);}
+
+.ptag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;font-family:monospace;}
+.pt-x1{background:rgba(167,139,250,.2);color:var(--x1);}
+.pt-x2{background:rgba(244,114,182,.2);color:var(--x2);}
+.pt-h1{background:rgba(52,211,153,.2);color:var(--h1);}
+.pt-h2{background:rgba(96,165,250,.2);color:var(--h2);}
+.pt-h3{background:rgba(251,146,60,.2);color:var(--h3);}
+
+.steps{display:flex;flex-direction:column;gap:14px;}
+.step{background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.step.active{border-color:var(--accent);}
+.step.done{border-color:var(--ok);opacity:.9;}
+.step-hdr{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;user-select:none;}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
+.step.active .step-num{background:var(--accent);}
+.step.done .step-num{background:var(--ok);}
+.step-title{font-weight:600;font-size:13px;}
+.step-sub{color:var(--text2);font-size:11px;margin-left:auto;}
+.step-body{padding:16px;display:none;}
+.step.active .step-body,.step.open .step-body{display:block;}
+
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(79,142,247,.05);}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{font-size:28px;margin-bottom:6px;}
+.drop-text{color:var(--text2);font-size:12px;}.drop-text b{color:var(--accent);}
+.file-loaded{border-color:var(--ok);background:rgba(34,197,94,.05);}
+
+.btn{padding:8px 18px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:#3d7be0;}
+.btn-primary:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;}
+.col{flex:1;min-width:160px;}
+label{display:block;color:var(--text2);font-size:11px;margin-bottom:4px;}
+input[type=text],input[type=password],select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:7px;font-size:12px;}
+input:focus,select:focus{outline:none;border-color:var(--accent);}
+.info-text{color:var(--text2);font-size:12px;line-height:1.6;}
+.mt8{margin-top:8px;}.mt16{margin-top:16px;}
+.progress-bar{height:3px;background:var(--border);border-radius:2px;margin:10px 0;}
+.progress-bar .fill{height:100%;border-radius:2px;background:var(--accent);transition:width .3s;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(79,142,247,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.sc{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.sc .sl{color:var(--text2);font-size:11px;margin-bottom:3px;}
+.sc .sv{font-size:16px;font-weight:700;}
+.match-banner{border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;}
+.match-banner.ok{background:rgba(34,197,94,.12);border:1px solid var(--ok);color:var(--ok);}
+.match-banner.error{background:rgba(239,68,68,.12);border:1px solid var(--error);color:var(--error);}
+.match-banner .detail{color:var(--text2);font-size:12px;font-weight:400;margin-top:2px;}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--surface2);color:var(--text2);padding:7px 10px;text-align:left;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:7px 10px;border-bottom:1px solid rgba(46,51,80,.5);vertical-align:middle;}
+tr:hover td{background:rgba(79,142,247,.04);}
+.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;}
+.tag-ok{background:rgba(34,197,94,.15);color:var(--ok);}
+.tag-error{background:rgba(239,68,68,.15);color:var(--error);}
+.tag-warn{background:rgba(245,158,11,.15);color:var(--warn);}
+.diff-text{color:var(--error);font-size:11px;}
+.mono{font-family:'Consolas',monospace;}
+.manual-input{background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;margin-top:10px;}
+.empty-state{text-align:center;padding:40px;color:var(--text2);}
+.empty-state .ei{font-size:40px;margin-bottom:10px;}
+.compass-status{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.cs{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid;}
+.cs.ok{border-color:var(--ok);color:var(--ok);background:rgba(34,197,94,.1);}
+.cs.ng{border-color:var(--text3);color:var(--text3);background:var(--surface2);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LEAN<span>AI</span></div>
+  <div class="version">ドレー・通関 確認ツール v1.2 (2026-04-03)</div>
+  <div class="api-mini">
+    <span style="color:var(--text2);font-size:11px;">API KEY</span>
+    <div class="api-dot" id="apiDot"></div>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." maxlength="200">
+    <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="saveApiKey()">保存</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" id="tab-dash" onclick="switchTab('dash')">🏠 ダッシュボード</div>
+  <div class="tab" id="tab-match" onclick="switchTab('match')">📋 照合</div>
+</div>
+
+<!-- ════════ DASHBOARD ════════ -->
+<div class="tab-body active" id="body-dash">
+<div class="tab-content">
+
+  <div class="folder-banner" id="folderBanner">
+    <span style="font-size:20px;">📁</span>
+    <div class="folder-path" id="folderPath">請求書フォルダが選択されていません</div>
+    <button class="btn btn-ghost btn-sm" onclick="selectFolder()">フォルダ選択</button>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;">
+    <span style="font-size:18px;">📊</span>
+    <div style="flex:1;">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px;">COMPASS データ (3シート)</div>
+      <div class="compass-status" id="compassStatus">
+        <span class="cs ng" id="cs-dry">_dry detail</span>
+        <span class="cs ng" id="cs-sum">_dry_sum</span>
+        <span class="cs ng" id="cs-cus">_cus</span>
+      </div>
+      <div class="info-text" id="dashCompassInfo" style="font-size:11px;">COMPASS_ドレージ_通関料_TOOL.xlsx を選択してください</div>
+    </div>
+    <label class="btn btn-ghost btn-sm" style="cursor:pointer;position:relative;">
+      ファイル選択
+      <input type="file" accept=".xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer;" onchange="loadCompass(this.files[0])">
+    </label>
+  </div>
+
+  <div class="month-bar" id="monthBar">
+    <span class="info-text">フォルダを選択すると月一覧が表示されます</span>
+  </div>
+
+  <div id="dashContent">
+    <div class="empty-state">
+      <div class="ei">📂</div>
+      <div>請求書フォルダを選択して開始してください</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ════════ MATCH TAB ════════ -->
+<div class="tab-body" id="body-match">
+<div class="tab-content">
+<div class="steps">
+
+  <div class="step active open" id="step1">
+    <div class="step-hdr" onclick="toggleStep('step1')">
+      <div class="step-num">1</div>
+      <div class="step-title">COMPASS データ読込</div>
+      <div class="step-sub" id="step1-sub">COMPASS_ドレージ_通関料_TOOL.xlsx をアップロード</div>
+    </div>
+    <div class="step-body">
+      <div class="drop-zone" id="compassDrop">
+        <input type="file" accept=".xlsx,.xls" onchange="loadCompass(this.files[0])">
+        <div class="drop-icon">📊</div>
+        <div class="drop-text"><b>COMPASS_ドレージ_通関料_TOOL.xlsx</b> をドロップ</div>
+      </div>
+      <div class="compass-status mt8">
+        <span class="cs ng" id="ms-dry">_dry detail</span>
+        <span class="cs ng" id="ms-sum">_dry_sum</span>
+        <span class="cs ng" id="ms-cus">_cus</span>
+      </div>
+      <div id="compassInfo" style="display:none;" class="info-text mt8"></div>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <div class="step-hdr" onclick="toggleStep('step2')">
+      <div class="step-num">2</div>
+      <div class="step-title">請求書 読込・業者特定</div>
+      <div class="step-sub" id="step2-sub">PDF をAI解析</div>
+    </div>
+    <div class="step-body">
+      <div class="drop-zone" id="invoiceDrop">
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="loadInvoicePDF(this.files[0])">
+        <div class="drop-icon">📄</div>
+        <div class="drop-text"><b>請求書PDF</b> をドロップ<br>
+          <span style="font-size:11px;">ファイル名から業者を自動判定 (例: 2601OTK.pdf)</span></div>
+      </div>
+      <div id="ocrProgress" style="display:none;" class="mt8">
+        <div class="progress-bar"><div class="fill" id="ocrFill"></div></div>
+        <div class="info-text" id="ocrStatus"></div>
+      </div>
+      <div id="manualVendorBox" style="display:none;" class="manual-input mt16">
+        <label>⚠️ 業者を手動で指定</label>
+        <div class="hint info-text" id="ocrCompanyHint" style="margin-bottom:8px;"></div>
+        <div class="row">
+          <div class="col">
+            <label>業者 (COMPASSコード)</label>
+            <select id="vendorSel" onchange="onManualVendorChange()">
+              <option value="">-- 業者を選択 --</option>
+            </select>
+          </div>
+          <div class="col" style="max-width:160px;">
+            <label>対象月 (YYYYMM)</label>
+            <input type="text" id="targetMonthInput" placeholder="202601" maxlength="6" oninput="onManualMonthChange()">
+          </div>
+        </div>
+      </div>
+      <div id="invoiceResult" class="mt16" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <div class="step-hdr" onclick="toggleStep('step3')">
+      <div class="step-num">3</div>
+      <div class="step-title">照合結果</div>
+      <div class="step-sub" id="step3-sub">STEP 1〜2 を完了してください</div>
+    </div>
+    <div class="step-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="matchBtn" onclick="runMatch()" disabled>▶ 照合実行</button>
+        <button class="btn btn-ghost" id="saveBtn" onclick="saveResult()" style="display:none;">💾 結果を保存</button>
+        <button class="btn btn-ghost" onclick="resetMatch()">↺ リセット</button>
+      </div>
+      <div id="matchResult"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// 業者マスター
+// ══════════════════════════════════════════
+const VENDOR_MASTER = {
+  'O.T.K':       { ja:'O.T.K.',           type:'X1', sheet:'cus',  key:'bl_number',   basis:'date',      toll:false },
+  '沖縄国際海運':  { ja:'沖縄国際海運',     type:'X1', sheet:'cus',  key:'bl_number',   basis:'date',      toll:false },
+  'セイユー商事':  { ja:'セイユー商事',      type:'X2', sheet:'both', key:'booking_no',  basis:'date',      toll:false },
+  '明邦運送':     { ja:'明邦運送',          type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:false },
+  'IT':           { ja:'ITトレーディング',  type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:false },
+  'アサヒ':       { ja:'松沢紙業(旧アサヒ)',type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:false },
+  '日正運輸':     { ja:'日正運輸',          type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:false },
+  '山勝':         { ja:'山勝ロジスティクス', type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:false },
+  '国際コンテナ':  { ja:'国際コンテナ輸送',  type:'H1', sheet:'dry',  key:'container_no',basis:'work_date', toll:true  },
+  'リトルウィング':{ ja:'Little WING',      type:'H2', sheet:'sum',  key:'booking_no',  basis:'work_date', toll:false },
+  'イーストライン':{ ja:'イーストライン',    type:'H2', sheet:'sum',  key:'booking_no',  basis:'work_date', toll:false },
+  '今井':         { ja:'今井商運',          type:'H2', sheet:'sum',  key:'booking_no',  basis:'work_date', toll:false },
+  '池谷':         { ja:'池谷運送',          type:'H3', sheet:'dry',  key:null,          basis:'work_date', toll:true  },
+};
+
+const PATTERN_LABEL = { X1:'通関', X2:'通関+ドレー', H1:'ドレー/CTN', H2:'ドレー/BKG', H3:'ドレー/月計' };
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const S = {
+  apiKey: '',
+  rootHandle: null,
+  monthHandles: {},
+  selectedMonth: '',
+  // COMPASS data
+  compassDry: [],   // _dry detail
+  compassSum: [],   // _dry_sum
+  compassCus: [],   // _cus
+  compassLoaded: { dry:false, sum:false, cus:false },
+  // current matching
+  selectedVendor: '',
+  targetYM: 0,
+  invoiceData: null,
+  lastMatchResult: null,
+  pdfFiles: {},
+  currentMonthHandle: null,
+  _bulkStop: false,
+};
+
+const DB_NAME = 'leenai_dray_v1';
+const DB_STORE = 'settings';
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = async () => {
+  const k = localStorage.getItem('leenai_apikey_v1') || '';
+  S.apiKey = k;
+  document.getElementById('apiKeyInput').value = k;
+  updateApiDot();
+  // populate vendor selector
+  const sel = document.getElementById('vendorSel');
+  Object.entries(VENDOR_MASTER).forEach(([code, v]) => {
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = `${v.ja} [${v.type}]`;
+    sel.appendChild(o);
+  });
+  await tryRestoreFolder();
+};
+
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-ant-')) { alert('APIキーは sk-ant- で始まります'); return; }
+  S.apiKey = k; localStorage.setItem('leenai_apikey_v1', k); updateApiDot();
+}
+function updateApiDot() {
+  document.getElementById('apiDot').className = 'api-dot' + (S.apiKey ? ' ok' : '');
+}
+function switchTab(name) {
+  ['dash','match'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+    document.getElementById('body-'+t).classList.toggle('active', t===name);
+  });
+}
+
+// ══════════════════════════════════════════
+// INDEXEDDB
+// ══════════════════════════════════════════
+async function openDB() {
+  return new Promise((res,rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = rej;
+  });
+}
+async function dbGet(key) {
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(DB_STORE,'readonly');
+    tx.objectStore(DB_STORE).get(key).onsuccess = e => res(e.target.result);
+    tx.onerror = rej;
+  });
+}
+async function dbSet(key, val) {
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(DB_STORE,'readwrite');
+    tx.objectStore(DB_STORE).put(val, key);
+    tx.oncomplete = res; tx.onerror = rej;
+  });
+}
+
+// ══════════════════════════════════════════
+// FOLDER
+// ══════════════════════════════════════════
+async function selectFolder() {
+  try {
+    const handle = await window.showDirectoryPicker({ mode:'readwrite' });
+    S.rootHandle = handle; await dbSet('rootHandle', handle);
+    await loadFolderStructure();
+  } catch(e) { if (e.name !== 'AbortError') alert('フォルダ選択エラー: ' + e.message); }
+}
+async function tryRestoreFolder() {
+  try {
+    const handle = await dbGet('rootHandle');
+    if (!handle) return;
+    const perm = await handle.queryPermission({ mode:'readwrite' });
+    if (perm === 'granted') { S.rootHandle = handle; await loadFolderStructure(); }
+    else showReconnectButton(handle);
+  } catch {}
+}
+function showReconnectButton(handle) {
+  document.getElementById('folderBanner').innerHTML = `
+    <span style="font-size:20px;">📁</span>
+    <div class="folder-path"><b>前回のフォルダ</b>に再接続が必要です</div>
+    <button class="btn btn-primary btn-sm" onclick="reconnectFolder()">再接続</button>`;
+  window._pendingHandle = handle;
+}
+window.reconnectFolder = async () => {
+  try { await window._pendingHandle.requestPermission({ mode:'readwrite' }); S.rootHandle = window._pendingHandle; await loadFolderStructure(); }
+  catch { alert('再接続失敗。フォルダを再選択してください。'); }
+};
+async function loadFolderStructure() {
+  if (!S.rootHandle) return;
+  S.monthHandles = {};
+  const months = [];
+  for await (const [name, handle] of S.rootHandle.entries()) {
+    if (handle.kind === 'directory' && /^\d{4}$/.test(name)) {
+      S.monthHandles[name] = handle; months.push(name);
+    }
+  }
+  months.sort();
+  const banner = document.getElementById('folderBanner');
+  banner.className = 'folder-banner ok';
+  banner.innerHTML = `
+    <span style="font-size:20px;">✅</span>
+    <div class="folder-path"><b>${S.rootHandle.name}</b> — ${months.length}ヶ月分</div>
+    <button class="btn btn-ghost btn-sm" onclick="selectFolder()">変更</button>`;
+  const bar = document.getElementById('monthBar');
+  if (months.length === 0) { bar.innerHTML = '<span class="info-text">月フォルダが見つかりません (例: 2601, 2602...)</span>'; return; }
+  bar.innerHTML = months.map(m => `<button class="month-btn" id="mbtn-${m}" onclick="selectMonth('${m}')">${formatYM4(m)}</button>`).join('');
+  if (months.length > 0) selectMonth(months[months.length - 1]);
+}
+function formatYM4(ym4) {
+  return `${2000+parseInt(ym4.slice(0,2))}年${parseInt(ym4.slice(2,4))}月`;
+}
+async function selectMonth(ym4) {
+  S.selectedMonth = ym4;
+  document.querySelectorAll('.month-btn').forEach(b => b.classList.toggle('active', b.id === 'mbtn-'+ym4));
+  await renderDashboard(ym4);
+}
+
+// ══════════════════════════════════════════
+// COMPASS 読込 (3シート)
+// ══════════════════════════════════════════
+async function loadCompass(file) {
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array', cellDates:true });
+
+    // シート名を柔軟に検索
+    const findSheet = (keyword) => wb.SheetNames.find(n => n.includes(keyword));
+    const dryName  = findSheet('information (2)') || findSheet('information(2)');
+    const sumName  = findSheet('_dry') || findSheet('dry');
+    const cusName  = findSheet('_cus') || findSheet('cus');
+
+    if (dryName) {
+      S.compassDry = sheetToRows(wb.Sheets[dryName]);
+      S.compassLoaded.dry = true;
+    }
+    if (sumName && sumName !== dryName) {
+      S.compassSum = sheetToRows(wb.Sheets[sumName]);
+      S.compassLoaded.sum = true;
+    }
+    if (cusName) {
+      S.compassCus = sheetToRows(wb.Sheets[cusName]);
+      S.compassLoaded.cus = true;
+    }
+
+    updateCompassStatus();
+    const total = S.compassDry.length + S.compassSum.length + S.compassCus.length;
+    const info = `_dry:${S.compassDry.length}行 / _sum:${S.compassSum.length}行 / _cus:${S.compassCus.length}行 (計${total}件)`;
+    ['dashCompassInfo','compassInfo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = info; el.style.display='block'; }
+    });
+    // step1 done
+    if (S.compassLoaded.dry || S.compassLoaded.cus) {
+      document.getElementById('step1').classList.add('done');
+      document.getElementById('step1-sub').textContent = info;
+      activateStep('step2');
+    }
+    if (S.selectedMonth) await renderDashboard(S.selectedMonth);
+  } catch(e) { alert('COMPASS読込エラー: ' + e.message); }
+}
+
+function sheetToRows(sheet) {
+  // raw:true + cellDates:true → 日付はDate객체, 数値は数値のまま取得
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval:null, raw:true });
+  rows.forEach(r => {
+    // 日付フィールドの正規化
+    ['work_date','date','dray_pay_date','custom_pay_date','pay_date'].forEach(col => {
+      const v = r[col];
+      if (v instanceof Date) {
+        // cellDates:true + raw:true → Date객체 그대로 사용
+        r[col] = v;
+      } else if (typeof v === 'number' && v > 0) {
+        // Excelシリアル日付 → JS Date変換 (cellDates:trueなら通常来ないが念のため)
+        const d = XLSX.SSF.parse_date_code(v);
+        r[col] = d ? new Date(d.y, d.m - 1, d.d) : null;
+      } else if (typeof v === 'string' && v.trim()) {
+        // 文字列日付 "2026-01-05" "2026/01/05" "2026-01-05 00:00:00" 等
+        const cleaned = v.replace(/(\d{4})[\/](\d{1,2})[\/](\d{1,2}).*/, '$1-$2-$3')
+                         .replace(/ .*$/, '');
+        const parsed = new Date(cleaned);
+        r[col] = isNaN(parsed.getTime()) ? null : parsed;
+      } else {
+        r[col] = null;
+      }
+    });
+    // 数値フィールドの正規化
+    ['Amount','dray_cost','other_expense','custom_fee','forwarder_cost','toll'].forEach(col => {
+      r[col] = parseFloat(r[col]) || 0;
+    });
+  });
+  return rows;
+}
+
+function updateCompassStatus() {
+  [['dry','_dry detail'],['sum','_dry_sum'],['cus','_cus']].forEach(([k,label]) => {
+    ['cs-','ms-'].forEach(prefix => {
+      const el = document.getElementById(prefix+k);
+      if (el) {
+        el.className = 'cs ' + (S.compassLoaded[k] ? 'ok' : 'ng');
+        el.textContent = label + (S.compassLoaded[k] ? ' ✓' : '');
+      }
+    });
+  });
+}
+
+// ══════════════════════════════════════════
+// 月フィルタリング
+// ══════════════════════════════════════════
+function getDateRange(ym6) {
+  const y = Math.floor(ym6 / 100), m = ym6 % 100;
+  return { start: new Date(y, m-1, 1), end: new Date(y, m, 1) };
+}
+
+function inRange(date, range) {
+  if (!date) return false;
+  const d = date instanceof Date ? date : new Date(date);
+  return d >= range.start && d < range.end;
+}
+
+function getCompassRows(vendorCode, targetYM) {
+  const v = VENDOR_MASTER[vendorCode];
+  if (!v) return { dry:[], sum:[], cus:[], total:0 };
+  const range = getDateRange(targetYM);
+  let dry=[], sum=[], cus=[];
+
+  if (v.sheet === 'dry' || v.sheet === 'both') {
+    dry = S.compassDry.filter(r => {
+      const matchCode = r.dray === vendorCode;
+      const dateOk = v.basis === 'work_date' ? inRange(r.work_date, range) : inRange(r.date, range);
+      return matchCode && dateOk;
+    });
+  }
+  if (v.sheet === 'sum' || v.sheet === 'both') {
+    sum = S.compassSum.filter(r => {
+      const matchCode = r.beneficiary === vendorCode;
+      const dateOk = v.basis === 'work_date' ? inRange(r.work_date, range) : inRange(r.date, range);
+      return matchCode && dateOk;
+    });
+  }
+  if (v.sheet === 'cus' || v.sheet === 'both') {
+    cus = S.compassCus.filter(r => {
+      const matchCode = r.forwarder === vendorCode;
+      const dateOk = inRange(r.date, range);
+      return matchCode && dateOk;
+    });
+  }
+
+  const total = [...dry,...sum].reduce((a,r) => a+(r.Amount||r.dray_cost||0),0)
+              + cus.reduce((a,r) => a+(r.Amount||0),0);
+  return { dry, sum, cus, total };
+}
+
+function compassTotal(vendorCode, targetYM) {
+  return getCompassRows(vendorCode, targetYM).total;
+}
+
+// ══════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════
+async function renderDashboard(ym4) {
+  const content = document.getElementById('dashContent');
+  content.innerHTML = '<div class="info-text">読込中...</div>';
+  const monthHandle = S.monthHandles[ym4];
+  if (!monthHandle) { content.innerHTML = '<div class="empty-state"><div class="ei">📂</div><div>月フォルダが見つかりません</div></div>'; return; }
+
+  // 結果JSON読込
+  let saved = {};
+  try {
+    const jh = await monthHandle.getFileHandle('LEENAI_ドレー通関_確認結果.json');
+    saved = JSON.parse(await (await jh.getFile()).text());
+  } catch {}
+
+  // PDFファイル検索
+  const pdfFiles = {}, unmapped = [];
+  for await (const [name, handle] of monthHandle.entries()) {
+    if (handle.kind === 'file' && name.toLowerCase().endsWith('.pdf')) {
+      const code = extractVendorFromFilename(name);
+      if (code) pdfFiles[code] = { name, handle };
+      else unmapped.push(name);
+    }
+  }
+  S.pdfFiles = pdfFiles; S.currentMonthHandle = monthHandle;
+
+  // ターゲットYM
+  const targetYM = (2000 + parseInt(ym4.slice(0,2))) * 100 + parseInt(ym4.slice(2,4));
+
+  // 全業者リスト (COMPASSにデータあり or PDFあり)
+  const allVendors = new Set([...Object.keys(VENDOR_MASTER)]);
+  const activeVendors = [...allVendors].filter(code => {
+    const rows = getCompassRows(code, targetYM);
+    return rows.total > 0 || pdfFiles[code];
+  });
+
+  if (activeVendors.length === 0 && Object.keys(pdfFiles).length === 0) {
+    content.innerHTML = `<div class="empty-state"><div class="ei">📭</div>
+      <div>${formatYM4(ym4)}のデータがありません<br>
+      <span style="font-size:11px;">COMPASSデータを読み込むか、PDFファイルをフォルダに配置してください</span></div></div>`;
+    return;
+  }
+
+  // 集計
+  let compassTotal_all = 0, confirmed = 0, errors = 0;
+  activeVendors.forEach(code => {
+    compassTotal_all += compassTotal(code, targetYM);
+    if (saved[code]) {
+      if (saved[code].status === 'ok') confirmed++;
+      else if (saved[code].status === 'error') errors++;
+    }
+  });
+  const pdfCount = Object.keys(pdfFiles).length;
+
+  let html = `
+  <div class="summary-row">
+    <div class="sc"><div class="sl">対象業者数</div><div class="sv">${activeVendors.length}社</div></div>
+    <div class="sc"><div class="sl">COMPASS合計</div><div class="sv">¥${compassTotal_all.toLocaleString()}</div></div>
+    <div class="sc ok"><div class="sl">✅ 確認完了</div><div class="sv" style="color:var(--ok)">${confirmed}社</div></div>
+    <div class="sc error"><div class="sl">❌ 差異あり</div><div class="sv" style="color:var(--error)">${errors}社</div></div>
+    <div class="sc"><div class="sl">⬜ 未確認</div><div class="sv" style="color:var(--text2)">${activeVendors.length-confirmed-errors}社</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <button class="btn btn-primary" id="bulkBtn" onclick="runBulkMatch()"
+      ${!S.apiKey || pdfCount===0 || !S.compassLoaded.dry ? 'disabled' : ''}>
+      ⚡ 一括照合 (PDF ${pdfCount}社)
+    </button>
+    <button class="btn btn-ghost btn-sm" id="bulkStopBtn" onclick="stopBulk()" style="display:none;">⏹ 中止</button>
+    <div id="bulkProgress" style="display:none;flex:1;min-width:200px;">
+      <div style="color:var(--text2);font-size:11px;margin-bottom:4px;" id="bulkProgressTxt"></div>
+      <div class="progress-bar"><div class="fill" id="bulkFill"></div></div>
+    </div>
+    ${!S.apiKey ? '<span style="color:var(--error);font-size:11px;">⚠️ APIキー未設定</span>' :
+      !S.compassLoaded.dry ? '<span style="color:var(--warn);font-size:11px;">⚠️ COMPASSデータ未読込</span>' :
+      pdfCount===0 ? '<span style="color:var(--text2);font-size:11px;">PDFファイルなし</span>' : ''}
+  </div>
+  <div class="dash-table-wrap"><table class="dash-table">
+    <tr><th>業者名</th><th>パターン</th><th class="num">COMPASS金額</th>
+    <th class="num">請求書金額</th><th>PDFファイル</th><th>確認状態</th><th class="num">差額</th><th></th></tr>`;
+
+  for (const code of activeVendors.sort()) {
+    const v = VENDOR_MASTER[code];
+    const comp = compassTotal(code, targetYM);
+    const pdf  = pdfFiles[code];
+    const s    = saved[code];
+    const ptClass = `pt-${v.type.toLowerCase()}`;
+
+    let badge, diffTxt, invTxt;
+    if (s) {
+      invTxt = s.invoiceTotal ? `¥${s.invoiceTotal.toLocaleString()}` : '—';
+      if (s.status==='ok') {
+        badge = '<span class="sbadge sbadge-ok">✅ 完了</span>';
+        diffTxt = '<span style="color:var(--ok)">¥0</span>';
+      } else {
+        badge = '<span class="sbadge sbadge-error">❌ 差異</span>';
+        diffTxt = `<span style="color:var(--error)">¥${(s.diff||0).toLocaleString()}</span>`;
+      }
+    } else {
+      invTxt = '—'; badge = '<span class="sbadge sbadge-none">⬜ 未確認</span>'; diffTxt = '—';
+    }
+
+    html += `<tr>
+      <td><b>${v.ja}</b><br><span style="font-size:10px;color:var(--text2)">${code}</span></td>
+      <td><span class="ptag ${ptClass}">${v.type}</span><br>
+          <span style="font-size:10px;color:var(--text2)">${PATTERN_LABEL[v.type]}</span></td>
+      <td class="num">¥${comp.toLocaleString()}</td>
+      <td class="num">${invTxt}</td>
+      <td style="font-size:11px;color:var(--text2)">${pdf ? pdf.name : '—'}</td>
+      <td>${badge}</td>
+      <td class="num">${diffTxt}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="gotoMatch('${code}','${ym4}')">📋 照合</button></td>
+    </tr>`;
+  }
+  html += '</table></div>';
+
+  if (unmapped.length > 0) {
+    html += `<div style="margin-top:16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-size:11px;color:var(--warn);margin-bottom:6px;">⚠️ 業者特定できなかったPDF (${unmapped.length}件)</div>
+      ${unmapped.map(n=>`<span style="font-size:11px;color:var(--text2);margin-right:12px;">${n}</span>`).join('')}
+    </div>`;
+  }
+  content.innerHTML = html;
+}
+
+// ファイル名から業者コード抽出
+// ── 業者名エイリアス (ファイル名に使われる表記 → COMPASSコード) ──
+const VENDOR_ALIASES = {
+  // ドット・アンダーバー・スペース違い
+  'OTK':            'O.T.K',
+  'O.T.K':          'O.T.K',
+  'otk':            'O.T.K',
+  // Little Wing 表記ゆれ
+  'little_wing':    'リトルウィング',
+  'littlewing':     'リトルウィング',
+  'little wing':    'リトルウィング',
+  'リトルウィング':   'リトルウィング',
+  'リトルウイング':   'リトルウィング',
+  // 国際コンテナ
+  '国際':            '国際コンテナ',
+  '国際コンテナ':     '国際コンテナ',
+  // アサヒ / 松沢紙業
+  'アサヒ':          'アサヒ',
+  '松沢':            'アサヒ',
+  // 沖縄国際海運
+  '沖縄国際':        '沖縄国際海運',
+  'okk':            '沖縄国際海運',
+  // セイユー商事
+  'セイユー':        'セイユー商事',
+  'セイユー商事':     'セイユー商事',
+  'セイユ':          'セイユー商事',
+  // 日正運輸
+  '日正':            '日正運輸',
+  // 山勝
+  '山勝':            '山勝',
+  // 池谷
+  '池谷':            '池谷',
+  // 今井
+  '今井':            '今井',
+  // イーストライン
+  'イーストライン':   'イーストライン',
+  'eastline':       'イーストライン',
+  // 明邦運送
+  '明邦':            '明邦運送',
+  'meibo':          '明邦運送',
+  // IT トレーディング
+  'it':             'IT',
+  'itトレーディング': 'IT',
+  // 明邦 reading from filename first
+};
+
+function extractVendorFromFilename(name) {
+  const base = name.replace(/\.(pdf)$/i,'');
+
+  // ─── パターン① 【業者名】... 形式 (全角・半角ブラケット) ───
+  const mBracket = base.match(/^[【\[](.*?)[】\]]/);
+  if (mBracket) {
+    const code = resolveVendorName(mBracket[1].trim());
+    if (code) return code;
+  }
+
+  // ─── パターン② YYMM + 業者名 形式 ───
+  const mYMMfront = base.match(/^(\d{4})(.+?)(?:\s*修正.*)?$/i);
+  if (mYMMfront && isValidYM(mYMMfront[1])) {
+    const code = resolveVendorName(mYMMfront[2].trim());
+    if (code) return code;
+  }
+
+  // ─── パターン③ 業者名 + YYMM 形式 (例: 明邦2601) ───
+  const mVendorFirst = base.match(/^(.+?)(\d{4})(?:\s*修正.*)?$/i);
+  if (mVendorFirst && isValidYM(mVendorFirst[2])) {
+    const code = resolveVendorName(mVendorFirst[1].trim());
+    if (code) return code;
+  }
+
+  return null;
+}
+
+// 業者名文字列 → COMPASSコード解決
+function resolveVendorName(raw) {
+  if (!raw) return null;
+  const norm = raw.toLowerCase().replace(/[\s　_\-・]/g,'');
+
+  // 1. エイリアス完全一致
+  const aliasKey = Object.keys(VENDOR_ALIASES).find(k =>
+    k.toLowerCase().replace(/[\s　_\-・]/g,'') === norm
+  );
+  if (aliasKey) return VENDOR_ALIASES[aliasKey];
+
+  // 2. COMPASSコード完全一致
+  const codeExact = Object.keys(VENDOR_MASTER).find(c =>
+    c.toLowerCase().replace(/[\s　_\-・]/g,'') === norm
+  );
+  if (codeExact) return codeExact;
+
+  // 3. エイリアス部分一致
+  const aliasPartial = Object.keys(VENDOR_ALIASES).find(k => {
+    const kn = k.toLowerCase().replace(/[\s　_\-・]/g,'');
+    return norm.includes(kn) || kn.includes(norm);
+  });
+  if (aliasPartial) return VENDOR_ALIASES[aliasPartial];
+
+  // 4. COMPASSコード部分一致
+  const codePartial = Object.keys(VENDOR_MASTER).find(c => {
+    const cn = c.toLowerCase().replace(/[\s　_\-・]/g,'');
+    return norm.includes(cn) || cn.includes(norm);
+  });
+  if (codePartial) return codePartial;
+
+  // 5. ja名部分一致
+  const jaPartial = Object.entries(VENDOR_MASTER).find(([c,v]) => {
+    const jn = v.ja.toLowerCase().replace(/[\s　_\-・]/g,'');
+    return norm.includes(jn) || jn.includes(norm);
+  });
+  if (jaPartial) return jaPartial[0];
+
+  return null;
+}
+
+function isValidYM(s) {
+  const y = parseInt(s.slice(0,2)), m = parseInt(s.slice(2,4));
+  return y >= 21 && y <= 99 && m >= 1 && m <= 12;
+}
+
+// ══════════════════════════════════════════
+// 照合タブへ移動
+// ══════════════════════════════════════════
+function gotoMatch(vendorCode, ym4) {
+  switchTab('match');
+  S.selectedVendor = vendorCode;
+  const ym6 = (2000+parseInt(ym4.slice(0,2)))*100 + parseInt(ym4.slice(2,4));
+  S.targetYM = ym6;
+  document.getElementById('targetMonthInput').value = String(ym6);
+  // 業者選択セット
+  const sel = document.getElementById('vendorSel');
+  sel.value = vendorCode;
+  document.getElementById('manualVendorBox').style.display='block';
+  document.getElementById('ocrCompanyHint').textContent = `ダッシュボードから選択: ${VENDOR_MASTER[vendorCode]?.ja||vendorCode} / ${formatYM4(ym4)}`;
+  // COMPASS読込済みなら次へ
+  if (S.compassLoaded.dry || S.compassLoaded.cus) {
+    document.getElementById('step1').classList.add('done');
+    activateStep('step2');
+    document.getElementById('matchBtn').disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════
+// PDF 読込 & OCR
+// ══════════════════════════════════════════
+async function loadInvoicePDF(file) {
+  if (!file) return;
+  if (!S.apiKey) { alert('APIキーを設定してください'); return; }
+
+  const prog = document.getElementById('ocrProgress');
+  const fill = document.getElementById('ocrFill');
+  const stat = document.getElementById('ocrStatus');
+  prog.style.display = 'block';
+  fill.style.width = '20%'; stat.textContent = 'PDF読込中...';
+
+  try {
+    const b64 = await fileToBase64(file);
+    fill.style.width = '40%'; stat.textContent = 'AI OCR実行中...';
+
+    // ファイル名から業者特定
+    const detectedCode = extractVendorFromFilename(file.name);
+    const detectedYM   = extractYMFromFilename(file.name);
+
+    const pattern = detectedCode ? VENDOR_MASTER[detectedCode]?.type : null;
+    const ocrPrompt = buildOcrPrompt(pattern);
+
+    const ocrResult = await callClaude(b64, ocrPrompt);
+    fill.style.width = '80%'; stat.textContent = 'OCR解析完了';
+
+    S.invoiceData = { ...ocrResult, file: file.name, detectedCode, detectedYM };
+
+    // 業者・月 セット
+    if (detectedCode) {
+      S.selectedVendor = detectedCode;
+      document.getElementById('vendorSel').value = detectedCode;
+    }
+    if (detectedYM) {
+      S.targetYM = detectedYM;
+      document.getElementById('targetMonthInput').value = String(detectedYM);
+    }
+
+    // 業者が特定できたか
+    if (!S.selectedVendor || !S.targetYM) {
+      document.getElementById('manualVendorBox').style.display = 'block';
+      document.getElementById('ocrCompanyHint').textContent =
+        `OCR読取: ${ocrResult.company||'不明'} / ${ocrResult.period||'不明'} → 業者を手動指定してください`;
+    } else {
+      document.getElementById('manualVendorBox').style.display = 'none';
+    }
+
+    renderInvoiceResult(ocrResult, detectedCode);
+    fill.style.width = '100%';
+    document.getElementById('step2').classList.add('done');
+    document.getElementById('step2-sub').textContent = `${ocrResult.company||'不明'} / 税抜¥${(ocrResult.total_before_tax||0).toLocaleString()}`;
+    activateStep('step3');
+
+    if (S.selectedVendor && S.targetYM && (S.compassLoaded.dry || S.compassLoaded.cus)) {
+      document.getElementById('matchBtn').disabled = false;
+    }
+  } catch(e) {
+    stat.textContent = 'OCRエラー: ' + e.message;
+  }
+}
+
+function buildOcrPrompt(pattern) {
+  const base = `請求書PDFからJSON形式で情報を抽出してください。数値はカンマなしの整数または小数で返してください。JSONのみ返してください。`;
+  const itemDef = {
+    X1: `"items":[{"bl_number":"B/L番号","amount":税抜金額}]`,
+    X2: `"items":[{"booking_no":"BKG番号","amount_before_tax":税抜金額}]`,
+    H1: `"items":[{"container_no":"コンテナ番号","work_date":"MM/DD","amount":税抜金額}]`,
+    H2: `"items":[{"booking_no":"BKG番号","work_date":"MM/DD","amount":税抜金額}]`,
+    H3: ``,
+  };
+  const items = pattern && itemDef[pattern] !== undefined ? itemDef[pattern] : itemDef['H1'];
+  return `${base}
+{
+  "company":"請求元会社名",
+  "period":"対象期間（例: 2026年1月）",
+  "total_before_tax":税抜合計（数値のみ）,
+  "tax":消費税額（数値のみ）,
+  "total_with_tax":税込合計（数値のみ）${items ? ',\n  '+items : ''}
+}
+高速料金や通行料金がある場合はtotal_before_taxに含めてください（税抜の運賃合計+高速代合計）。`;
+}
+
+function renderInvoiceResult(data, code) {
+  const v = code ? VENDOR_MASTER[code] : null;
+  const el = document.getElementById('invoiceResult');
+  el.style.display = 'block';
+  el.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <div><div style="font-size:10px;color:var(--text2)">請求元</div><div style="font-weight:600">${data.company||'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">対象期間</div><div style="font-weight:600">${data.period||'—'}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">税抜合計</div><div style="font-weight:700;color:var(--accent)">¥${(data.total_before_tax||0).toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:var(--text2)">消費税</div><div style="font-weight:600">¥${(data.tax||0).toLocaleString()}</div></div>
+      ${v ? `<div><div style="font-size:10px;color:var(--text2)">パターン</div><div><span class="ptag pt-${v.type.toLowerCase()}">${v.type}</span></div></div>` : ''}
+    </div>
+    ${data.items?.length ? `<div class="info-text mt8">明細 ${data.items.length}件 取得済み</div>` : ''}
+  </div>`;
+}
+
+function extractYMFromFilename(name) {
+  const m = name.match(/^(\d{4})/);
+  if (!m) return 0;
+  const ym4 = m[1];
+  if (!isValidYM(ym4)) return 0;
+  return (2000+parseInt(ym4.slice(0,2)))*100 + parseInt(ym4.slice(2,4));
+}
+
+// ══════════════════════════════════════════
+// CLAUDE API呼び出し
+// ══════════════════════════════════════════
+async function callClaude(b64, prompt, retries=3) {
+  for (let i=0; i<retries; i++) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': S.apiKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true',
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:2000,
+          messages:[{ role:'user', content:[
+            { type:'document', source:{ type:'base64', media_type:'application/pdf', data:b64 }},
+            { type:'text', text:prompt }
+          ]}]
+        })
+      });
+      if (res.status === 529 || res.status === 429) {
+        if (i < retries-1) { await sleep((i+1)*10000); continue; }
+        throw new Error(`API rate limit (${res.status})`);
+      }
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const text = data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+      return JSON.parse(text);
+    } catch(e) {
+      if (i === retries-1) throw e;
+      await sleep(5000);
+    }
+  }
+}
+
+async function callClaudeTotalOnly(b64, retries=3) {
+  const prompt = `請求書PDFの合計金額のみをJSON形式で返してください。JSONのみ返してください。
+{"company":"請求元会社名","period":"対象期間","total_before_tax":税抜合計（数値のみ）,"tax":消費税額,"total_with_tax":税込合計}
+高速料金や通行料金がある場合はtotal_before_taxに含めてください。`;
+  return callClaude(b64, prompt, retries);
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function fileToBase64(file) {
+  return new Promise((res,rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════════════
+// 照合実行
+// ══════════════════════════════════════════
+async function runMatch() {
+  if (!S.invoiceData || !S.selectedVendor || !S.targetYM) { alert('請求書と業者・月を確認してください'); return; }
+  const btn = document.getElementById('matchBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 照合中...';
+
+  const result = performMatch(S.selectedVendor, S.targetYM, S.invoiceData);
+  S.lastMatchResult = result;
+  renderMatchResult(result);
+
+  btn.disabled = false; btn.textContent = '▶ 照合実行';
+  document.getElementById('saveBtn').style.display = 'inline-flex';
+  document.getElementById('step3-sub').textContent = result.status === 'ok' ? '✅ 一致' : `❌ 差額¥${Math.abs(result.diff||0).toLocaleString()}`;
+}
+
+function performMatch(vendorCode, targetYM, invoice) {
+  const v = VENDOR_MASTER[vendorCode] || {};
+  const rows = getCompassRows(vendorCode, targetYM);
+  const compassAmt = rows.total;
+  const invoiceAmt = invoice.total_before_tax || 0;
+  const diff = compassAmt - invoiceAmt;
+  const matched = Math.abs(diff) <= 1;
+
+  const base = {
+    vendorCode, vendorJa: v.ja||vendorCode, type: v.type||'?',
+    targetYM, invoiceTotal: invoiceAmt, compassTotal: compassAmt,
+    diff, status: matched ? 'ok' : 'error',
+    checkedAt: new Date().toISOString(),
+  };
+
+  if (matched) return base;
+
+  // 明細照合
+  if (v.type === 'X1') {
+    base.details = matchX1(rows.cus, invoice.items||[]);
+  } else if (v.type === 'X2') {
+    base.details = matchX2(rows.cus, rows.dry, invoice.items||[]);
+  } else if (v.type === 'H1') {
+    base.details = matchH1(rows.dry, invoice.items||[]);
+  } else if (v.type === 'H2') {
+    base.details = matchH2(rows.sum, invoice.items||[]);
+  }
+  return base;
+}
+
+function matchX1(cusRows, items) {
+  return items.map(it => {
+    const bl = it.bl_number;
+    const cmp = cusRows.find(r => r.bl_number === bl || r.booking_no === bl);
+    const ok = cmp && Math.abs((cmp.Amount||0) - (it.amount||0)) <= 1;
+    return { key:bl, invAmt:it.amount||0, cmpAmt:cmp?.Amount||0, status:cmp?(ok?'ok':'error'):'missing' };
+  });
+}
+
+function matchX2(cusRows, dryRows, items) {
+  return items.map(it => {
+    const bkg = it.booking_no;
+    const cusAmt = cusRows.filter(r=>r.booking_no===bkg).reduce((a,r)=>a+(r.Amount||0),0);
+    const dryAmt = dryRows.filter(r=>r.booking_no===bkg).reduce((a,r)=>a+(r.Amount||0),0);
+    const cmpAmt = cusAmt + dryAmt;
+    const invAmt = it.amount_before_tax || it.amount || 0;
+    const ok = Math.abs(cmpAmt - invAmt) <= 1;
+    return { key:bkg, invAmt, cmpAmt, status: cmpAmt>0?(ok?'ok':'error'):'missing',
+             detail:`通関¥${cusAmt.toLocaleString()}+ドレー¥${dryAmt.toLocaleString()}` };
+  });
+}
+
+function matchH1(dryRows, items) {
+  return items.map(it => {
+    const ctn = it.container_no;
+    const cmp = dryRows.find(r => r.container_no === ctn);
+    const ok = cmp && Math.abs((cmp.Amount||0) - (it.amount||0)) <= 1;
+    return { key:ctn, invAmt:it.amount||0, cmpAmt:cmp?.Amount||0, status:cmp?(ok?'ok':'error'):'missing' };
+  });
+}
+
+function matchH2(sumRows, items) {
+  return items.map(it => {
+    const bkg = it.booking_no;
+    const matched = sumRows.filter(r=>r.booking_no===bkg);
+    const cmpAmt = matched.reduce((a,r)=>a+(r.dray_cost||0)+(r.toll||0),0);
+    const invAmt = it.amount || 0;
+    const ok = Math.abs(cmpAmt - invAmt) <= 1;
+    return { key:bkg, invAmt, cmpAmt, status: matched.length>0?(ok?'ok':'error'):'missing' };
+  });
+}
+
+// ══════════════════════════════════════════
+// 結果レンダリング
+// ══════════════════════════════════════════
+function renderMatchResult(r) {
+  const el = document.getElementById('matchResult');
+  const bannerClass = r.status==='ok'?'ok':'error';
+  const bannerIcon  = r.status==='ok'?'✅ 合計一致':'❌ 差異あり';
+
+  let html = `
+  <div class="match-banner ${bannerClass}">
+    <div>
+      <div>${bannerIcon}</div>
+      <div class="detail">
+        COMPASS ¥${r.compassTotal.toLocaleString()} / 請求書 ¥${r.invoiceTotal.toLocaleString()}
+        ${r.status!=='ok' ? ` / 差額 ¥${Math.abs(r.diff).toLocaleString()}` : ''}
+      </div>
+    </div>
+    <div style="margin-left:auto;font-size:11px;color:var(--text2)">
+      <span class="ptag pt-${(r.type||'').toLowerCase()}">${r.type}</span>
+      ${r.vendorJa||r.vendorCode}
+    </div>
+  </div>`;
+
+  if (r.status !== 'ok' && r.details?.length) {
+    html += `<div class="tbl-wrap mt8"><table>
+      <tr><th>識別キー</th><th class="num">請求書</th><th class="num">COMPASS</th><th class="num">差額</th><th>状態</th>
+      ${r.type==='X2'?'<th>内訳</th>':''}</tr>`;
+    for (const d of r.details) {
+      const diff = (d.cmpAmt||0) - (d.invAmt||0);
+      const tag = d.status==='ok'?'<span class="tag tag-ok">✅</span>'
+                : d.status==='missing'?'<span class="tag tag-error">❌ 未登録</span>'
+                : '<span class="tag tag-error">❌</span>';
+      html += `<tr>
+        <td class="mono" style="font-size:11px">${d.key||'—'}</td>
+        <td class="num">¥${(d.invAmt||0).toLocaleString()}</td>
+        <td class="num">¥${(d.cmpAmt||0).toLocaleString()}</td>
+        <td class="num ${diff!==0?'diff-text':''}">${diff!==0?`¥${diff.toLocaleString()}`:'—'}</td>
+        <td>${tag}</td>
+        ${r.type==='X2'?`<td style="font-size:11px;color:var(--text2)">${d.detail||'—'}</td>`:''}
+      </tr>`;
+    }
+    // COMPASS側にあって請求書にないもの (H3は表示しない)
+    if (r.type !== 'H3') {
+      html += `</table></div>`;
+      html += `<div class="info-text mt8">※ パターン ${r.type}: ${PATTERN_LABEL[r.type]||''} による照合</div>`;
+    } else {
+      html += '</table></div>';
+      html += `<div style="margin-top:8px;background:rgba(251,146,60,.1);border:1px solid var(--h3);border-radius:8px;padding:10px;font-size:12px;color:var(--h3)">
+        ⚠️ H3パターン（${r.vendorJa}）: コンテナ単位の明細照合は不可。月合計のみで判定しています。</div>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// 一括照合
+// ══════════════════════════════════════════
+async function runBulkMatch() {
+  if (!S.selectedMonth || !S.currentMonthHandle) return;
+  const targetYM = (2000+parseInt(S.selectedMonth.slice(0,2)))*100 + parseInt(S.selectedMonth.slice(2,4));
+  const pdfs = Object.entries(S.pdfFiles);
+  if (pdfs.length === 0) return;
+
+  S._bulkStop = false;
+  document.getElementById('bulkBtn').disabled = true;
+  document.getElementById('bulkStopBtn').style.display = 'inline-flex';
+  const prog = document.getElementById('bulkProgress');
+  prog.style.display = 'block';
+
+  let saved = {};
+  try {
+    const jh = await S.currentMonthHandle.getFileHandle('LEENAI_ドレー通関_確認結果.json');
+    saved = JSON.parse(await (await jh.getFile()).text());
+  } catch {}
+
+  for (let i=0; i<pdfs.length; i++) {
+    if (S._bulkStop) break;
+    const [code, pdfInfo] = pdfs[i];
+    const pct = Math.round((i/pdfs.length)*100);
+    document.getElementById('bulkFill').style.width = pct+'%';
+    document.getElementById('bulkProgressTxt').textContent = `${i+1}/${pdfs.length}: ${pdfInfo.name}`;
+    updateDashRow(code, 'processing');
+
+    try {
+      const file = await pdfInfo.handle.getFile();
+      const b64  = await fileToBase64(file);
+      const ocr  = await callClaudeTotalOnly(b64);
+      const res  = performMatch(code, targetYM, ocr);
+      saved[code] = res;
+      await saveDashResult(saved);
+      updateDashRow(code, res.status, res.invoiceTotal, res.diff);
+    } catch(e) {
+      console.error(code, e);
+      updateDashRow(code, 'error_ocr');
+    }
+
+    if (i < pdfs.length-1) await sleep(2000);
+  }
+
+  document.getElementById('bulkBtn').disabled = false;
+  document.getElementById('bulkStopBtn').style.display = 'none';
+  document.getElementById('bulkFill').style.width = '100%';
+  document.getElementById('bulkProgressTxt').textContent = '完了';
+  if (S.selectedMonth) await renderDashboard(S.selectedMonth);
+}
+
+function stopBulk() { S._bulkStop = true; }
+
+function updateDashRow(code, status, invTotal, diff) {
+  // 簡易的に行を更新（フルレンダリングは最後）
+}
+
+async function saveDashResult(data) {
+  if (!S.currentMonthHandle) return;
+  try {
+    const fh = await S.currentMonthHandle.getFileHandle('LEENAI_ドレー通関_確認結果.json', { create:true });
+    const w  = await fh.createWritable();
+    await w.write(JSON.stringify(data, null, 2));
+    await w.close();
+  } catch(e) { console.error('save error', e); }
+}
+
+// ══════════════════════════════════════════
+// 結果保存
+// ══════════════════════════════════════════
+async function saveResult() {
+  if (!S.lastMatchResult) return;
+  const ym4 = String(S.lastMatchResult.targetYM).slice(2,4).padStart(2,'0')
+            + String(S.lastMatchResult.targetYM).slice(4,6).padStart(2,'0');
+
+  if (!S.currentMonthHandle || !S.monthHandles[ym4]) {
+    const json = JSON.stringify({ [S.lastMatchResult.vendorCode]: S.lastMatchResult }, null, 2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([json], { type:'application/json' }));
+    a.download = `LEENAI_ドレー通関_確認結果_${ym4}.json`;
+    a.click();
+    return;
+  }
+
+  try {
+    const mh = S.monthHandles[ym4];
+    let existing = {};
+    try {
+      const jh = await mh.getFileHandle('LEENAI_ドレー通関_確認結果.json');
+      existing = JSON.parse(await (await jh.getFile()).text());
+    } catch {}
+    existing[S.lastMatchResult.vendorCode] = S.lastMatchResult;
+    const fh = await mh.getFileHandle('LEENAI_ドレー通関_確認結果.json', { create:true });
+    const w  = await fh.createWritable();
+    await w.write(JSON.stringify(existing, null, 2));
+    await w.close();
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = '✅ 保存済み'; btn.disabled = true;
+    if (S.selectedMonth) await renderDashboard(S.selectedMonth);
+  } catch(e) { alert('保存エラー: ' + e.message); }
+}
+
+// ══════════════════════════════════════════
+// MISC
+// ══════════════════════════════════════════
+function toggleStep(id) {
+  const el = document.getElementById(id);
+  if (!el.classList.contains('active')) el.classList.toggle('open');
+}
+function activateStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active','open');
+}
+function onManualVendorChange() {
+  S.selectedVendor = document.getElementById('vendorSel').value;
+  checkMatchReady();
+}
+function onManualMonthChange() {
+  const v = document.getElementById('targetMonthInput').value.trim();
+  if (v.length === 6 && /^\d{6}$/.test(v)) { S.targetYM = parseInt(v); checkMatchReady(); }
+}
+function checkMatchReady() {
+  const ready = S.selectedVendor && S.targetYM && S.invoiceData && (S.compassLoaded.dry || S.compassLoaded.cus);
+  document.getElementById('matchBtn').disabled = !ready;
+}
+function resetMatch() {
+  S.selectedVendor=''; S.targetYM=0; S.invoiceData=null; S.lastMatchResult=null;
+  document.getElementById('invoiceResult').style.display='none';
+  document.getElementById('matchResult').innerHTML='';
+  document.getElementById('ocrProgress').style.display='none';
+  document.getElementById('manualVendorBox').style.display='none';
+  document.getElementById('matchBtn').disabled=true;
+  document.getElementById('saveBtn').style.display='none';
+  ['step2','step3'].forEach(id => document.getElementById(id).classList.remove('done','active','open'));
+  document.getElementById('step2-sub').textContent='PDFをAI解析';
+  document.getElementById('step3-sub').textContent='STEP 1〜2 を完了してください';
+  activateStep('step2');
+}
+</script>
+</body>
+</html>
