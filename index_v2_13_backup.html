@@ -1,30 +1,41 @@
-<!DOCTYPE html>
-<html lang="ja" data-theme="dark">
+﻿<!DOCTYPE html>
+<html lang="ja">
 <head>
+<script>
+  if (location.search.includes('code=')) {
+    const code = new URLSearchParams(location.search).get('code');
+    if (window.opener) { window.opener.postMessage({ code }, location.origin); window.close(); }
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link id="leenaiFavicon" rel="icon">
-<link rel="stylesheet" href="https://mhlee205.github.io/LEENAI_COMMON/v1/leenai-common.css">
-<script src="https://mhlee205.github.io/LEENAI_COMMON/v1/leenai-common.js"></script>
-<script>if(!window.LEENAI){document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<div style="padding:40px;font-family:sans-serif">共通ファイルの読み込みに失敗しました。ページを再読み込みしてください。</div>';});}</script>
+<title>LEENAI ドレー・通関 確認ツール v2.13</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* ── E-02 固有 CSS ── */
-:root{
-  --error:var(--danger);
-  --x1:#a78bfa;--x2:#f472b6;--h1:#34d399;--h2:#60a5fa;--h3:#fb923c;--h4:#e879f9;
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+  --accent:#4f8ef7; --ok:#22c55e; --warn:#f59e0b; --error:#ef4444;
+  --info:#38bdf8; --text:#e2e8f0; --text2:#8892a4; --text3:#4a5568;
+  --x1:#a78bfa; --x2:#f472b6; --h1:#34d399; --h2:#60a5fa; --h3:#fb923c; --h4:#e879f9;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{min-height:100vh;font-size:13px;}
+body{font-family:'Segoe UI','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.logo{font-size:17px;font-weight:700;letter-spacing:1px;}.logo span{color:var(--accent);}
+.version{color:var(--text2);font-size:11px;background:var(--surface2);padding:2px 8px;border-radius:4px;}
+.api-mini{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.api-mini input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;width:220px;font-size:12px;}
+.api-mini input:focus{outline:none;border-color:var(--accent);}
 .api-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);}
 .api-dot.ok{background:var(--ok);}
 
-.tabs{display:flex;gap:2px;padding:16px 20px 0;background:var(--frame);}
+.tabs{display:flex;gap:2px;padding:16px 20px 0;background:var(--bg);}
 .tab{padding:9px 20px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--text2);font-weight:600;font-size:13px;border:1px solid transparent;border-bottom:none;transition:all .15s;}
-.tab.active{background:var(--read);color:var(--text);border-color:var(--border);}
+.tab.active{background:var(--surface);color:var(--text);border-color:var(--border);}
 .tab:hover:not(.active){color:var(--text);}
 .tab-body{display:none;}.tab-body.active{display:block;}
-.tab-content{background:var(--read);border:1px solid var(--border);border-top:none;border-radius:0 8px 8px 8px;padding:20px;min-height:400px;}
+.tab-content{background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 8px 8px 8px;padding:20px;min-height:400px;}
 
 .folder-banner{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
 .folder-banner.ok{border-color:var(--ok);}
@@ -33,7 +44,7 @@ body{min-height:100vh;font-size:13px;}
 
 .month-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .month-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;}
-.month-btn.active{background:var(--accent-btn);color:#fff;border-color:var(--accent-btn);}
+.month-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .month-btn:hover:not(.active){border-color:var(--accent);color:var(--accent);}
 
 .dash-table-wrap{overflow-x:auto;}
@@ -78,7 +89,7 @@ body{min-height:100vh;font-size:13px;}
 .file-loaded{border-color:var(--ok);background:rgba(34,197,94,.05);}
 
 .btn{padding:8px 18px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
-.btn-primary{background:var(--accent-btn);color:#fff;}.btn-primary:hover{filter:brightness(1.08);}
+.btn-primary{background:var(--accent);color:#fff;}.btn-primary:hover{background:#3d7be0;}
 .btn-primary:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;}
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
 .btn-sm{padding:5px 12px;font-size:11px;}
@@ -94,7 +105,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(79,142,247,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
-.sc{flex:1;min-width:120px;background:var(--read);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.sc{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
 .sc .sl{color:var(--text2);font-size:11px;margin-bottom:3px;}
 .sc .sv{font-size:16px;font-weight:700;}
 .match-banner{border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:600;}
@@ -123,17 +134,27 @@ tr:hover td{background:rgba(79,142,247,.04);}
 </head>
 <body>
 
-<div id="app" style="display:none">
-<!-- ln-header は LEENAI が挿入 -->
-
-<!-- API KEY サブバー -->
-<div style="background:var(--frame);border-bottom:1px solid var(--border);padding:6px 20px;display:flex;align-items:center;gap:8px;">
-  <span style="color:var(--text2);font-size:11px;">Claude API KEY</span>
-  <div class="api-dot" id="apiDot"></div>
-  <input type="password" id="apiKeyInput" placeholder="sk-ant-..." maxlength="200"
-    style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;width:260px;font-size:12px;outline:none;">
-  <button class="ln-btn-ghost" onclick="saveApiKey()" style="font-size:11px;padding:4px 10px;">保存</button>
+<div id="loginGate" style="display:flex;position:fixed;inset:0;background:#0f1117;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="font-size:40px;font-weight:800;letter-spacing:3px;color:#e2e8f0;">LEEN<span style="color:#4f8ef7">AI</span></div>
+  <div style="font-size:13px;color:#8892a4;font-weight:500;">ドレー・通関 確認ツール v2.13 (2026-04-08)</div>
+  <div style="width:48px;height:1px;background:#2e3350;margin:12px 0;"></div>
+  <div style="font-size:12px;color:#4a5568;text-align:center;line-height:1.8;">このツールを使用するには<br>Outlookアカウントでのログインが必要です</div>
+  <button id="gateLoginBtn" onclick="gateLogin()" style="margin-top:8px;background:#4f8ef7;color:#fff;border:none;padding:11px 32px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Segoe UI',sans-serif;display:inline-flex;align-items:center;gap:8px;">🔑 Outlookでログイン</button>
+  <div id="gateStatus" style="font-size:11px;color:#8892a4;height:18px;"></div>
 </div>
+
+<header>
+  <div class="logo">LEAN<span>AI</span></div>
+  <div class="version">ドレー・通関 確認ツール v2.13 (2026-04-08)</div>
+  <div class="api-mini">
+    <span style="color:var(--text2);font-size:11px;">API KEY</span>
+    <div class="api-dot" id="apiDot"></div>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." maxlength="200">
+    <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="saveApiKey()">保存</button>
+  </div>
+  <span id="authStatus" style="font-size:12px;color:#8892a4;margin-right:8px;">⚪ 未ログイン</span>
+  <button id="authBtn" onclick="toggleAuth()" style="background:transparent;color:#8892a4;border:1px solid #2e3350;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Segoe UI',sans-serif;">🔑 Outlookログイン</button>
+</header>
 
 <div class="tabs">
   <div class="tab active" id="tab-dash" onclick="switchTab('dash')">🏠 ダッシュボード</div>
@@ -264,36 +285,73 @@ tr:hover td{background:rgba(79,142,247,.04);}
 </div>
 </div>
 </div>
-<!-- ln-footer は LEENAI が挿入 -->
-</div><!-- /app -->
 
 <script>
-/* ══════════════════════════════════════════
-   LEENAI 共通 初期化
-══════════════════════════════════════════ */
-async function startTool(){
-  var k = localStorage.getItem('leenai_apikey_v1') || '';
-  S.apiKey = k;
-  document.getElementById('apiKeyInput').value = k;
-  updateApiDot();
-  var sel = document.getElementById('vendorSel');
-  Object.entries(VENDOR_MASTER).forEach(function([code, v]){
-    var o = document.createElement('option');
-    o.value = code;
-    o.textContent = v.ja + ' [' + v.type + ']';
-    sel.appendChild(o);
-  });
-  await tryRestoreFolder();
-}
+// ── OAuth2 PKCE ─────────────────────────────────────────────
+const OAUTH_CFG = {
+  clientId: 'f071a165-5e9b-44bf-b6a1-baba654524db',
+  tenantId: 'a56988ff-c2b8-4df8-9727-889ad4205198',
+  scopes:   'User.Read offline_access',
+  redirectUri: 'https://mhlee205.github.io/SHIPPING_SCHEDULE/'
+};
+let loggedIn = false, loggedInUser = '', accessToken = '';
 
-LEENAI.init({
-  sys:     'E-02',
-  name:    'Dray 通関費 チェック',
-  version: '3.0',
-  date:    '2026-10-08',
-  desc:    '請求書PDF を AI OCR で照合し、COMPASS ドレー・通関データと突合します',
-  onReady: startTool,
-});
+function _b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
+async function _sha256(s){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); }
+async function startOAuthFlow(){
+  const verifier = _b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = _b64url(await _sha256(verifier));
+  sessionStorage.setItem('pkce_v', verifier);
+  const p = new URLSearchParams({ client_id:OAUTH_CFG.clientId, response_type:'code', redirect_uri:OAUTH_CFG.redirectUri, scope:OAUTH_CFG.scopes, code_challenge:challenge, code_challenge_method:'S256', response_mode:'query' });
+  const popup = window.open(`https://login.microsoftonline.com/${OAUTH_CFG.tenantId}/oauth2/v2.0/authorize?${p}`, 'oauth', 'width=520,height=620');
+  return new Promise((resolve, reject) => {
+    const handler = async (e) => {
+      if (!e.data?.code) return;
+      window.removeEventListener('message', handler);
+      try {
+        const body = new URLSearchParams({ client_id:OAUTH_CFG.clientId, grant_type:'authorization_code', code:e.data.code, redirect_uri:OAUTH_CFG.redirectUri, code_verifier:sessionStorage.getItem('pkce_v') });
+        const r = await fetch(`https://login.microsoftonline.com/${OAUTH_CFG.tenantId}/oauth2/v2.0/token`, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
+        const t = await r.json();
+        if (t.error) throw new Error(t.error_description || t.error);
+        accessToken = t.access_token;
+        const u = await (await fetch('https://graph.microsoft.com/v1.0/me', {headers:{Authorization:'Bearer '+accessToken}})).json();
+        loggedIn = true; loggedInUser = u.displayName || u.mail || u.userPrincipalName;
+        updateAuthUI(true, loggedInUser); resolve();
+      } catch(err){ reject(err); }
+    };
+    window.addEventListener('message', handler);
+    const iv = setInterval(() => { if (popup.closed){ clearInterval(iv); window.removeEventListener('message',handler); reject(new Error('CANCELLED')); } }, 500);
+  });
+}
+function toggleAuth(){
+  if (loggedIn){ loggedIn=false; loggedInUser=''; accessToken=''; updateAuthUI(false); }
+  else { startOAuthFlow().catch(e => { if (e.message!=='CANCELLED') console.error(e); }); }
+}
+function updateAuthUI(isLoggedIn, user){
+  const st = document.getElementById('authStatus');
+  const btn = document.getElementById('authBtn');
+  if (!st || !btn) return;
+  if (isLoggedIn){
+    st.textContent = `🟢 ${user}`; st.style.color = '#22c55e';
+    btn.textContent = '🔓 ログアウト';
+    const gate = document.getElementById('loginGate'); if (gate) gate.style.display = 'none';
+  } else {
+    st.textContent = '⚪ 未ログイン'; st.style.color = '';
+    btn.textContent = '🔑 Outlookログイン';
+  }
+}
+async function gateLogin() {
+  const btn = document.getElementById('gateLoginBtn');
+  btn.disabled = true;
+  document.getElementById('gateStatus').textContent = 'ログイン中...';
+  try {
+    await startOAuthFlow();
+  } catch(e) {
+    btn.disabled = false;
+    document.getElementById('gateStatus').textContent = e.message !== 'CANCELLED' ? 'エラー: ' + e.message : '';
+  }
+}
+// ── end OAuth ────────────────────────────────────────────────
 
 // ══════════════════════════════════════════
 // 業者マスター
@@ -356,8 +414,23 @@ const DB_NAME = 'leenai_dray_v1';
 const DB_STORE = 'settings';
 
 // ══════════════════════════════════════════
-// INIT (startTool で実行 — LEENAI ログイン後)
+// INIT
 // ══════════════════════════════════════════
+window.onload = async () => {
+  const k = localStorage.getItem('leenai_apikey_v1') || '';
+  S.apiKey = k;
+  document.getElementById('apiKeyInput').value = k;
+  updateApiDot();
+  // populate vendor selector
+  const sel = document.getElementById('vendorSel');
+  Object.entries(VENDOR_MASTER).forEach(([code, v]) => {
+    const o = document.createElement('option');
+    o.value = code;
+    o.textContent = `${v.ja} [${v.type}]`;
+    sel.appendChild(o);
+  });
+  await tryRestoreFolder();
+};
 
 function saveApiKey() {
   const k = document.getElementById('apiKeyInput').value.trim();
